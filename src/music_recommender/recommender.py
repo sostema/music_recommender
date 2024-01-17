@@ -48,7 +48,9 @@ class Recommender:
         for idx in popular_artists:
             if idx in user_artists:
                 continue
-            recommended_artists.append(pd.Categorical(self.df["artist_name"]).categories[idx])
+            recommended_artists.append(
+                pd.Categorical(self.df["artist_name"]).categories[idx]
+            )
             if len(recommended_artists) >= 10:
                 break
 
@@ -80,7 +82,9 @@ class Recommender:
             for idx, _ in sorted_artists:
                 if idx in selected_artist_indices:
                     continue
-                recommended_artists.append(pd.Categorical(self.df["artist_name"]).categories[idx])
+                recommended_artists.append(
+                    pd.Categorical(self.df["artist_name"]).categories[idx]
+                )
                 if len(recommended_artists) >= 10:
                     return recommended_artists
 
@@ -122,10 +126,16 @@ class Recommender:
             #     - self.user_artist_matrix[k_nearest_users].mean(axis=0)
             # ).shape)
             # print(user_similarity[k_nearest_users].shape)
-            artist_ratings = average_user_rating + (+ np.multiply((
-                self.user_artist_matrix[k_nearest_users]
-                - self.user_artist_matrix[k_nearest_users].mean(axis=0)
-            ), user_similarity[k_nearest_users][:, None]) / self.user_artist_matrix[k_nearest_users].sum(axis=1)).sum(axis=0)
+            artist_ratings = average_user_rating + (
+                +np.multiply(
+                    (
+                        self.user_artist_matrix[k_nearest_users]
+                        - self.user_artist_matrix[k_nearest_users].mean(axis=0)
+                    ),
+                    user_similarity[k_nearest_users][:, None],
+                )
+                / self.user_artist_matrix[k_nearest_users].sum(axis=1)
+            ).sum(axis=0)
             artist_ratings = np.ravel(artist_ratings)
             sorted_artist_ratings = np.argsort(artist_ratings)[::-1]
 

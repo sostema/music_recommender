@@ -4,17 +4,19 @@ from music_recommender.recommender import Recommender
 
 
 def main():
-
     # Streamlit UI
-    st.title("Рекомендательная система \"Интернет-магазин музыки\"")
+    st.title('Рекомендательная система "Интернет-магазин музыки"')
 
     # Instantiate the Recommender class
     recommender = Recommender()
 
-    # Select artists from the multiselect dropdown
+    tracks_to_select = (
+        recommender.tracklist.groupby("artist_name")["full_name"].first().unique()
+    )
+    # Select tracks from the multiselect dropdown
     selected_tracks = st.multiselect(
         "Выберите свои любимые песни:",
-        recommender.tracklist["full_name"].unique(),
+        tracks_to_select,
     )
 
     # Button to get recommendations

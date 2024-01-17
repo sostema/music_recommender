@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Tuple
 
@@ -30,9 +31,9 @@ def remove_similar_tracks(df: pd.DataFrame) -> pd.DataFrame:
     df["count"] = df.groupby(["artist_name", "track_name"]).transform("size")
     # Sort by count in descending order
     df = df.sort_values(by="count", ascending=False)
-    df[["artist_name", "track_name"]] = df.groupby(["artist_name_small", "track_name_small"])[
-        ["artist_name", "track_name"]
-    ].transform("first")
+    df[["artist_name", "track_name"]] = df.groupby(
+        ["artist_name_small", "track_name_small"]
+    )[["artist_name", "track_name"]].transform("first")
     df = df.sort_index()
     return df
 
@@ -48,7 +49,7 @@ def remove_unpopular_artists(df: pd.DataFrame) -> pd.DataFrame:
     - pd.DataFrame: DataFrame with unpopular artists removed.
     """
     # Filter out artists with less than 1000 occurrences
-    return df[df.groupby("artist_name").transform("size") > 1000]
+    return df[df.groupby("artist_name").transform("size") > 100]
 
 
 def remove_inactive_users(df: pd.DataFrame) -> pd.DataFrame:
@@ -62,7 +63,7 @@ def remove_inactive_users(df: pd.DataFrame) -> pd.DataFrame:
     - pd.DataFrame: DataFrame with inactive users removed.
     """
     # Filter out users with fewer than 500 unique tracks in their playlists
-    return df[df.groupby("user_id")["track_name"].transform("nunique") > 500]
+    return df[df.groupby("user_id")["track_name"].transform("nunique") > 100]
 
 
 def remove_uniform_playlists(df: pd.DataFrame) -> pd.DataFrame:
@@ -115,6 +116,7 @@ def generate_data() -> Tuple[pd.DataFrame, csr_matrix, pd.DataFrame]:
             on_bad_lines="skip",
             names=["user_id", "artist_name", "track_name", "playlist_name"],
             header=None,
+            skiprows=[0],
         )
         .dropna()
         .drop_duplicates()
@@ -123,13 +125,15 @@ def generate_data() -> Tuple[pd.DataFrame, csr_matrix, pd.DataFrame]:
     data = remove_similar_tracks(big_data)
     data = remove_unpopular_artists(data)
     data = remove_inactive_users(data)
-    data = remove_uniform_playlists(data)
+    # data = remove_uniform_playlists(data)
     # Get the tracklist
     tracklist = get_tracklist(data)
 
     # Extract relevant columns, calculate ratings, and create user-artist matrix
     data = data[["user_id", "artist_name", "playlist_name"]].drop_duplicates()
-    data["rating"] = data.groupby(["user_id", "artist_name"])["playlist_name"].transform("count")
+    data["rating"] = data.groupby(["user_id", "artist_name"])[
+        "playlist_name"
+    ].transform("count")
     user_artist_matrix = csr_matrix(
         (
             data["rating"],
@@ -142,7 +146,9 @@ def generate_data() -> Tuple[pd.DataFrame, csr_matrix, pd.DataFrame]:
     return data, user_artist_matrix, tracklist
 
 
-def save_data(data: pd.DataFrame, user_artist_matrix: csr_matrix, tracklist: pd.DataFrame):
+def save_data(
+    data: pd.DataFrame, user_artist_matrix: csr_matrix, tracklist: pd.DataFrame
+):
     """
     Save processed data, user-artist matrix, and tracklist to files.
 
@@ -169,10 +175,15 @@ def get_data() -> Tuple[pd.DataFrame, csr_matrix, pd.DataFrame]:
     Returns:
     - Tuple[pd.DataFrame, csr_matrix, pd.DataFrame]: Processed data, user-artist matrix, and tracklist.
     """
-    # Read processed data from Parquet format
-    df = pd.read_parquet("./data/processed_data.pqt")
-    # Load user-artist matrix from NPZ format
-    user_artist_matrix = load_npz("./data/uam.npz")
-    # Read tracklist from Parquet format
-    tracklist = pd.read_parquet("./data/tracklist.pqt")
+    if os.path.exists("./data/processed_data.pqt"):
+        # Read processed data from Parquet format
+        df = pd.read_parquet("./data/processed_data.pqt")
+        # Load user-artist matrix from NPZ format
+        user_artist_matrix = load_npz("./data/uam.npz")
+        # Read tracklist from Parquet format
+        tracklist = pd.read_parquet("./data/tracklist.pqt")
+    else:
+        df, user_artist_matrix, tracklist = generate_data()
+        save_data(df, user_artist_matrix, tracklist)
+
     return df, user_artist_matrix, tracklist
